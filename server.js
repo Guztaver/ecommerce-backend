@@ -15,7 +15,11 @@ const vendasRoutes = require('./routes/vendas');
 const app = express();
 const PORT = process.env.PORT || 2024;
 
-app.use(cors());
+app.use(cors({
+    origin: '*', 
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'auth-token', 'auth-token-loja', 'auth-token-cliente']
+}));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
