@@ -18,45 +18,13 @@ const PORT = process.env.PORT || 2024;
 
 const swaggerDocument = {
   openapi: '3.0.0',
-  info: {
-    title: 'API E-Com+',
-    version: '1.0.0',
-    description: 'Documentação da API do projeto de E-commerce'
-  },
+  info: { title: 'API E-Com+', version: '1.0.0' },
   servers: [
-    {
-      url: 'https://ecommerce-backend-green-iota.vercel.app', 
-      description: 'Produção (Vercel)'
-    },
-    {
-      url: `http://localhost:${PORT}`,
-      description: 'Servidor Local'
-    }
+    { url: 'https://ecommerce-backend-green-iota.vercel.app', description: 'Vercel' },
+    { url: `http://localhost:${PORT}`, description: 'Local' }
   ]
 };
 
-app.use(cors({
-    origin: '*', 
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
-    allowedHeaders: ['Content-Type', 'auth-token', 'auth-token-loja', 'auth-token-cliente']
-}));
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
-
-const connectDB = async () => {
-  try {
-    await mongoose.connect('mongodb+srv://admin:senhaadmin@cluster0.5tidptg.mongodb.net/ecommerce', {
-      serverSelectionTimeoutMS: 5000, 
-      socketTimeoutMS: 45000,
-      family: 4 
-    });
-    console.log('✅ MongoDB Conectado!');
-  } catch (err) {
-    console.error('❌ Erro no Mongo:', err);
-  }
-};
-
-connectDB(); 
 const swaggerOptions = {
   customCssUrl: 'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/4.1.0/swagger-ui.min.css',
   customJs: [
@@ -65,8 +33,51 @@ const swaggerOptions = {
   ]
 };
 
-app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument, swaggerOptions));
+app.use(cors({ origin: '*' }));
+app.use(express.json({ limit: '50mb' }));
 
+const MONGO_URI = 'mongodb+srv://admin:senhaadmin@cluster0.5tidptg.mongodb.net/ecommerce';
+
+const connectDB = async () => {
+  try {
+    await mongoose.connect(MONGO_URI, {
+      family: 4, // Força IPv4
+    });
+    console.log('✅ MongoDB Conectado!');
+  } catch (err) {
+    console.error('❌ Erro de Conexão:', err);
+  }
+};
+connectDB();
+app.get('/status', async (req, res) => {
+  const state = mongoose.connection.readyState;
+  const states = { 0: 'Desconectado', 1: 'Conectado', 2: 'Conectando', 3: 'Desconectando' };
+  
+  try {
+    if(state === 1) {
+       await mongoose.connection.db.admin().ping();
+       return res.json({ 
+         status: 'OK', 
+         mongoState: states[state], 
+         message: 'Banco respondendo corretamente.' 
+       });
+    } else {
+       return res.status(500).json({ 
+         status: 'ERRO', 
+         mongoState: states[state], 
+         message: 'Mongoose não está conectado.' 
+       });
+    }
+  } catch (error) {
+    return res.status(500).json({ 
+      status: 'ERRO CRÍTICO', 
+      error: error.message,
+      detail: error
+    });
+  }
+});
+
+app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument, swaggerOptions));
 app.use('/produtos', produtoRoutes);      
 app.use('/api/loja', authRoutes);         
 app.use('/clientes', clientesRoutes);    
@@ -77,9 +88,9 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/vendas', vendasRoutes);
 
 app.get('/', (req, res) => {
-    res.send('API E-Com+ Rodando! 🚀 Acesse /docs para ver a documentação.');
+    res.send('API Rodando. Acesse /status para testar o banco ou /docs para documentação.');
 });
 
-app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
+app.listen(PORT, () => console.log(`Rodando na porta ${PORT}`));
 
 module.exports = app;
