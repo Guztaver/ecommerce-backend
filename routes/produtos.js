@@ -83,4 +83,19 @@ router.delete('/:id', verificarAuth, async (req, res) => {
   }
 });
 
+router.post('/bulk', verificarAuth, async (req, res) => {
+    try {
+        const produtos = req.body; 
+
+        const produtosComLoja = produtos.map(produto => ({
+            ...produto,
+            loja: req.loja._id 
+        }));
+        
+        const novosProdutos = await Produto.insertMany(produtosComLoja);
+        res.status(201).json({ message: 'Produtos cadastrados com sucesso!', total: novosProdutos.length });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
 module.exports = router;
