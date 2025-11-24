@@ -89,7 +89,7 @@ router.post('/bulk', verificarAuth, async (req, res) => {
 
         const produtosComLoja = produtos.map(produto => ({
             ...produto,
-            loja: req.loja._id 
+            lojaId: req.loja._id
         }));
         
         const novosProdutos = await Produto.insertMany(produtosComLoja);
