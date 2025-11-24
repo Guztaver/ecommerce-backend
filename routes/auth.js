@@ -4,13 +4,11 @@ const Loja = require('../models/loja');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const cloudinary = require('../config/cloudinary'); 
-const verificarAuth = require('../middleware/auth'); // 👈 CORREÇÃO: Importa o Middleware
+const verificarAuth = require('../middleware/auth');
 
 router.get('/perfil', verificarAuth, async (req, res) => {
     try {
-        // req.loja._id é o ID da loja logada, anexado pelo middleware
-        const loja = await Loja.findById(req.loja._id).select('-password'); // Busca e remove a senha
-
+        const loja = await Loja.findById(req.loja._id).select('-password'); 
         if (!loja) {
             return res.status(404).json({ message: 'Loja não encontrada.' });
         }
@@ -24,6 +22,7 @@ router.post('/register', async (req, res) => {
     try {
         const { 
             nome, 
+            nomeFantasia, 
             email, 
             password, 
             cnpj, 
@@ -47,6 +46,7 @@ router.post('/register', async (req, res) => {
 
         const novaLoja = new Loja({
             nome,
+            nomeFantasia, 
             email,
             password: hashedPassword,
             cnpj,
@@ -59,7 +59,7 @@ router.post('/register', async (req, res) => {
         res.status(201).json({ message: "Loja cadastrada!", id: savedLoja._id });
 
     } catch (err) {
-        res.status(400).json({ message: err.message });
+        res.status(400).json({ message: err.message, error: err });
     }
 });
 
@@ -67,12 +67,11 @@ router.post('/register', async (req, res) => {
 router.post('/login', async (req, res) => {
     try {
         const loja = await Loja.findOne({ email: req.body.email });
-        if (!loja) return res.status(400).send('Email ou senha inválidos.');
+        if (!loja) return res.status(400).send({ message: 'Email ou senha inválidos.' });
 
         const validPassword = await bcrypt.compare(req.body.password, loja.password);
-        if (!validPassword) return res.status(400).send('Email ou senha inválidos.');
+        if (!validPassword) return res.status(400).send({ message: 'Email ou senha inválidos.' });
 
-        // 🚨 Aviso: 'SEGREDO_SUPER_SECRETO' deve ser substituído pela variável de ambiente
         const token = jwt.sign({ _id: loja._id }, 'SEGREDO_SUPER_SECRETO'); 
         res.header('auth-token', token).send({ token: token });
 
